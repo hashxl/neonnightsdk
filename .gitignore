@@ -1,5 +1,7 @@
 obj/
-bin/Debug/
+# All of bin/, not just Debug: the published artifact is NeonNightSDK.dll at the repo root
+# (that's what manifest.json points to in PathToDLL), so bin/Release shouldn't be versioned.
+bin/
 *.cache
 *.user
 *.suo

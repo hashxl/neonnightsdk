@@ -9,7 +9,14 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <GameDir>..\..</GameDir>
+    <!-- Auto-detect the game root instead of assuming a fixed depth: the repo may be cloned
+         straight into <game>\neonnightsdk or into <game>\Mods\NeonNightSDK, and with the wrong
+         path EVERY reference disappears at once (what you see is a cascade of CS0246
+         "Sprite/Material/Character not found", which looks like a code error but is just the
+         HintPath failing to resolve). -->
+    <GameDir Condition="'$(GameDir)' == '' And Exists('..\Third Crisis Neon Nights_Data')">..</GameDir>
+    <GameDir Condition="'$(GameDir)' == '' And Exists('..\..\Third Crisis Neon Nights_Data')">..\..</GameDir>
+    <GameDir Condition="'$(GameDir)' == ''">..\..</GameDir>
     <ManagedDir>$(GameDir)\Third Crisis Neon Nights_Data\Managed</ManagedDir>
     <BepInExDir>$(GameDir)\BepInEx</BepInExDir>
   </PropertyGroup>
@@ -25,6 +32,12 @@
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>$(ManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- UnityEngine.Input (legacy) lives in its own module; without this, any Input.GetKeyDown
+         fails to compile with a confusing "the name 'Input' does not exist" error. -->
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(ManagedDir)\UnityEngine.InputLegacyModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule">
