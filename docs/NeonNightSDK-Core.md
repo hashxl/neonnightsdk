@@ -101,6 +101,18 @@ log names the culprit:
 | `SdkRuntime` | Frame pump and translation of the game's events |
 | `Scenes` | `IsMainMenu` / `IsGameplay` / `Active` |
 | `SdkLog` | Tagged logging and `SafeInvoke` |
+| `DebugKit` | Diagnostic console commands (`internal`, installed automatically) |
+
+### Diagnostic commands
+
+`DebugKit.Install()` runs as part of `SdkRuntime.Install()`, so every command below is available
+the moment any part of the SDK is used — no opt-in step.
+
+| Command | Does |
+|---|---|
+| `nnsdk.dump.inventory [nome]` | Lists every item a character is carrying (`Inventory` + `EquippedItems`) with its `Item.All` **key** — `item.name.ToLower()`, not the display name. Defaults to the player when no name is given. |
+
+`Item.All` is keyed by the ScriptableObject's `name.ToLower()` (`Asuna.Items.Item.InitializeBaseItems`), which does not always match the display name shown in-game or its casing. Guessing that key wrong fails silently at an `Item.All[key]` lookup — `nnsdk.dump.inventory` exists so nobody has to decompile the game to find it, the way `web_camera_phone` (display name `"Web_Camera_Phone"`) had to be confirmed for `Brazzer`'s `PhoneIntegration`.
 
 ### Events
 
@@ -267,6 +279,8 @@ wants them locked, or leave them frozen forever.
 
 ## Atualizações
 
+- **v0.3.0** — Added `DebugKit` and its first command, `nnsdk.dump.inventory` — the "Ferramentas
+  de Diagnóstico" item from the SDK roadmap (`nn-sdk.md`).
 - **v0.2.0** — First release of Core: `SdkEvents`, `Scheduler`, `ModContext`, `PlayerRef`,
   `PlayerControl`, `SdkRuntime`, `Scenes`, `SdkLog`. Documented the correct `PostTransition`
   timing, the `Character.Get` ambiguity, and the destruction of `DontDestroyOnLoad` objects

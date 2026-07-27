@@ -12,7 +12,7 @@ namespace NeonNightSDK.Core
     // and ModContext.For() reinstalls defensively.
     public static class SdkRuntime
     {
-        public const string Version = "0.2.0";
+        public const string Version = "0.3.0";
 
         private static bool _installed;
         private static bool _shuttingDown;
@@ -34,6 +34,7 @@ namespace NeonNightSDK.Core
             SceneManager.sceneLoaded += OnUnitySceneLoaded;
             LevelTransition.PostTransition.AddListener(OnPostTransition);
 
+            DebugKit.Install();
             EnsurePump();
             SdkLog.Info($"Core v{Version} installed (events + scheduler active).");
         }

@@ -135,7 +135,16 @@ namespace NeonNightSDK.Ui
             var button = rect.gameObject.AddComponent<UButton>();
             button.targetGraphic = image;
 
-            var textRect = UiFactory.Stretch(UiFactory.NewChild(rect, "Label"));
+            // A HorizontalLayoutGroup on `rect` itself (same trick Button() uses) gives it a
+            // real preferred width — the sum of its children's own preferred sizes. Without
+            // one, `rect` has no ILayoutElement of its own (Image/Button don't count), so
+            // LayoutUtility reports 0 width for it inside a horizontal Row (a vertical
+            // Column/body survives this by force-expanding width regardless) — the label's
+            // Text then wraps at ~0px, one character per line.
+            var inner = UiFactory.AddHorizontalLayout(rect, 0f, 0f);
+            inner.childForceExpandWidth = true;
+
+            var textRect = UiFactory.NewChild(rect, "Label");
             var text = textRect.gameObject.AddComponent<UText>();
             text.font = UiFactory.Font;
             text.text = label ?? string.Empty;

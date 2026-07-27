@@ -319,6 +319,10 @@ nnsdk.dump.animations
 
 Isso elimina dependências de ferramentas pessoais e facilita o trabalho de qualquer modder.
 
+> **v0.3.0**: primeiro comando implementado — `nnsdk.dump.inventory` (ver
+> `Core/DebugKit.cs` e [NeonNightSDK-Core.md](docs/NeonNightSDK-Core.md)). `dump.skins` /
+> `dump.bones` / `dump.animations` seguem como próximos candidatos.
+
 ---
 
 ## Versionamento
