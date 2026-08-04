@@ -4,7 +4,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using UButton = UnityEngine.UI.Button;
 using UImage = UnityEngine.UI.Image;
+using USlider = UnityEngine.UI.Slider;
 using UText = UnityEngine.UI.Text;
+using UToggle = UnityEngine.UI.Toggle;
 
 namespace NeonNightSDK.Ui
 {
@@ -206,6 +208,199 @@ namespace NeonNightSDK.Ui
                 field.onSubmit.AddListener(value => SdkLog.SafeInvoke("Ui input submit", () => onSubmit(value)));
 
             configure?.Invoke(field);
+            return this;
+        }
+
+        // ---- form controls ------------------------------------------------------------
+        //
+        // All three share the same shape — a label on the left, the control on the right, an
+        // optional muted explanation underneath — because that's what makes a page of options
+        // read as a table instead of a pile of widgets. The shape lives in ControlRow() and
+        // each control only builds its own right-hand side.
+
+        // On/off checkbox.
+        //
+        //   body.Toggle("Ativar fome", Cfg.Fome, v => Cfg.Fome = v, "Zoey fica com fome com o tempo.");
+        public UiBuilder Toggle(string label, bool value, Action<bool> onChanged,
+            string description = null, Action<UToggle> configure = null)
+        {
+            return ControlRow(label, description, slot =>
+            {
+                var box = UiFactory.NewChild(slot.Root, "Toggle");
+                var background = UiFactory.AddBackground(box, Theme.ControlOff);
+                background.raycastTarget = true;
+                UiFactory.SetSize(box, Theme.ControlHeight, Theme.ControlHeight, flexibleWidth: 0f);
+
+                // Inset so the checkmark reads as "inside the box" instead of covering it.
+                var mark = UiFactory.Stretch(UiFactory.NewChild(box, "Checkmark"));
+                mark.offsetMin = new Vector2(5f, 5f);
+                mark.offsetMax = new Vector2(-5f, -5f);
+                var markImage = UiFactory.AddBackground(mark, Theme.ControlOn);
+                markImage.raycastTarget = false;
+
+                var toggle = box.gameObject.AddComponent<UToggle>();
+                toggle.targetGraphic = background;
+                // `graphic` is the one uGUI shows/hides with the state — that's the checkmark,
+                // not the box. Wiring these two the other way round is why hand-rolled toggles
+                // tend to come out inverted.
+                toggle.graphic = markImage;
+                toggle.isOn = value;
+
+                if (onChanged != null)
+                    toggle.onValueChanged.AddListener(v =>
+                        SdkLog.SafeInvoke($"Ui toggle '{label}'", () => onChanged(v)));
+
+                // Keeps the box left-aligned in its slot instead of being stretched or centred
+                // by the row's layout group.
+                slot.Flexible();
+
+                configure?.Invoke(toggle);
+            });
+        }
+
+        // Numeric slider with a live readout.
+        //
+        //   body.Slider("Taxa de fadiga", 0f, 5f, Cfg.Taxa, v => Cfg.Taxa = v);
+        //
+        // wholeNumbers snaps to integers. `format` controls the readout only (default: one
+        // decimal, or no decimals when wholeNumbers).
+        public UiBuilder Slider(string label, float min, float max, float value,
+            Action<float> onChanged, bool wholeNumbers = false, string description = null,
+            Func<float, string> format = null, Action<USlider> configure = null)
+        {
+            var readout = format ?? (v => v.ToString(wholeNumbers ? "0" : "0.0",
+                System.Globalization.CultureInfo.InvariantCulture));
+
+            return ControlRow(label, description, slot =>
+            {
+                var root = UiFactory.NewChild(slot.Root, "Slider");
+                UiFactory.SetSize(root, null, Theme.ControlHeight, flexibleWidth: 1f);
+
+                // uGUI's Slider drives fillRect's and handleRect's anchors itself; all it needs
+                // from us is the three-object hierarchy with everything stretched.
+                var track = UiFactory.Stretch(UiFactory.NewChild(root, "Track"));
+                track.offsetMin = new Vector2(0f, Theme.ControlHeight * 0.35f);
+                track.offsetMax = new Vector2(0f, -Theme.ControlHeight * 0.35f);
+                UiFactory.AddBackground(track, Theme.ControlTrack);
+
+                var fillArea = UiFactory.Stretch(UiFactory.NewChild(root, "FillArea"));
+                fillArea.offsetMin = new Vector2(0f, Theme.ControlHeight * 0.35f);
+                fillArea.offsetMax = new Vector2(-Theme.ControlHeight, -Theme.ControlHeight * 0.35f);
+                var fill = UiFactory.Stretch(UiFactory.NewChild(fillArea, "Fill"));
+                var fillImage = UiFactory.AddBackground(fill, Theme.ControlOn);
+                fillImage.raycastTarget = false;
+
+                var handleArea = UiFactory.Stretch(UiFactory.NewChild(root, "HandleArea"));
+                var handle = UiFactory.NewChild(handleArea, "Handle");
+                handle.sizeDelta = new Vector2(Theme.ControlHeight * 0.6f, 0f);
+                var handleImage = UiFactory.AddBackground(handle, Theme.ControlHandle);
+                handleImage.raycastTarget = true;
+
+                var slider = root.gameObject.AddComponent<USlider>();
+                slider.fillRect = fill;
+                slider.handleRect = handle;
+                slider.targetGraphic = handleImage;
+                slider.direction = USlider.Direction.LeftToRight;
+                slider.minValue = min;
+                slider.maxValue = max;
+                slider.wholeNumbers = wholeNumbers;
+                slider.value = Mathf.Clamp(value, min, max);
+
+                UText valueLabel = null;
+                slot.Text(readout(slider.value), Theme.FontSizeSmall, Theme.TextMuted,
+                    align: TextAnchor.MiddleRight,
+                    configure: t =>
+                    {
+                        valueLabel = t;
+                        UiFactory.SetSize((RectTransform)t.transform, 60f, null, flexibleWidth: 0f);
+                    });
+
+                slider.onValueChanged.AddListener(v =>
+                {
+                    if (valueLabel != null) valueLabel.text = readout(v);
+                    if (onChanged != null)
+                        SdkLog.SafeInvoke($"Ui slider '{label}'", () => onChanged(v));
+                });
+
+                configure?.Invoke(slider);
+            });
+        }
+
+        // Cycles through a fixed list of choices: `<  Normal  >`.
+        //
+        //   body.Select("Dificuldade", new[]{"Fácil","Normal","Difícil"}, 1, i => Cfg.Dif = i);
+        //
+        // A cycler rather than a uGUI Dropdown on purpose: Dropdown needs a template hierarchy
+        // (blocker, scroll view, item prefab) that has to be built by hand at runtime and then
+        // renders BELOW other canvases, while a cycler is three widgets, works with a
+        // controller, and matches how console-style game menus present the same choice.
+        public UiBuilder Select(string label, string[] options, int index, Action<int> onChanged,
+            string description = null)
+        {
+            if (options == null || options.Length == 0)
+            {
+                SdkLog.Warn($"UiBuilder.Select('{label}'): no options, skipping.");
+                return this;
+            }
+
+            return ControlRow(label, description, slot =>
+            {
+                var current = Mathf.Clamp(index, 0, options.Length - 1);
+                UText valueLabel = null;
+
+                // Wraps around at both ends, so the control never dead-ends on a short list.
+                void Step(int delta)
+                {
+                    current = (current + delta + options.Length) % options.Length;
+                    if (valueLabel != null) valueLabel.text = options[current];
+                    if (onChanged != null)
+                        SdkLog.SafeInvoke($"Ui select '{label}'", () => onChanged(current));
+                }
+
+                slot.Button("<", () => Step(-1), width: 32f);
+                slot.Text(options[current], Theme.FontSizeBody, Theme.Text,
+                    align: TextAnchor.MiddleCenter,
+                    configure: t =>
+                    {
+                        valueLabel = t;
+                        UiFactory.SetSize((RectTransform)t.transform, null, null, flexibleWidth: 1f);
+                    });
+                slot.Button(">", () => Step(1), width: 32f);
+            });
+        }
+
+        // The shared skeleton behind Toggle / Slider / Select — and the extension point for a
+        // mod that needs a control this kit doesn't ship: pass your own `build` and you get the
+        // same alignment as everything else on the page.
+        public UiBuilder ControlRow(string label, string description, Action<UiBuilder> build)
+        {
+            var group = UiFactory.NewChild(Root, $"Control_{label}");
+            UiFactory.AddVerticalLayout(group, 0f, 2f);
+            UiFactory.SetSize(group, null, null, flexibleWidth: 1f);
+
+            var row = UiFactory.NewChild(group, "Row");
+            UiFactory.AddHorizontalLayout(row, 0f, Theme.Spacing);
+            UiFactory.SetSize(row, null, Theme.ButtonHeight, flexibleWidth: 1f);
+
+            var labelRect = UiFactory.NewChild(row, "Label");
+            var labelText = labelRect.gameObject.AddComponent<UText>();
+            labelText.font = UiFactory.Font;
+            labelText.text = label ?? string.Empty;
+            labelText.fontSize = Theme.FontSizeBody;
+            labelText.color = Theme.Text;
+            labelText.alignment = TextAnchor.MiddleLeft;
+            labelText.raycastTarget = false;
+            UiFactory.SetSize(labelRect, Theme.LabelWidth, null, flexibleWidth: 0f);
+
+            var slot = UiFactory.NewChild(row, "Slot");
+            UiFactory.AddHorizontalLayout(slot, 0f, Theme.Spacing);
+            UiFactory.SetSize(slot, null, null, flexibleWidth: 1f);
+
+            SdkLog.SafeInvoke($"UiBuilder.ControlRow('{label}')", () => build?.Invoke(new UiBuilder(slot, Theme)));
+
+            if (!string.IsNullOrEmpty(description))
+                new UiBuilder(group, Theme).Muted(description);
+
             return this;
         }
 

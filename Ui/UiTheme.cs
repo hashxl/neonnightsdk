@@ -39,6 +39,13 @@ namespace NeonNightSDK.Ui
         public Color InputBackground = new Color(0.03f, 0.04f, 0.06f, 1f);
         public Color Separator = new Color(1f, 1f, 1f, 0.10f);
 
+        // Form controls (Toggle / Slider / Select). Off-state deliberately reuses the input
+        // background so an unchecked box reads as "empty field" rather than "another button".
+        public Color ControlOff = new Color(0.03f, 0.04f, 0.06f, 1f);
+        public Color ControlOn = new Color(0.25f, 0.85f, 0.95f, 1f);
+        public Color ControlTrack = new Color(0.03f, 0.04f, 0.06f, 1f);
+        public Color ControlHandle = new Color(0.88f, 0.90f, 0.95f, 1f);
+
         public int FontSizeTitle = 30;
         public int FontSizeHeading = 22;
         public int FontSizeBody = 17;
@@ -49,6 +56,12 @@ namespace NeonNightSDK.Ui
         public float ButtonHeight = 34f;
         public float HeaderHeight = 52f;
         public float FooterHeight = 36f;
+
+        // Width reserved for the label of a form control, so every row in a settings page
+        // lines its control up at the same x — the thing that makes a list of options read as
+        // a table instead of a pile of widgets.
+        public float LabelWidth = 260f;
+        public float ControlHeight = 26f;
 
         public UiTheme Clone() => (UiTheme)MemberwiseClone();
     }

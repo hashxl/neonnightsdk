@@ -12,7 +12,7 @@ namespace NeonNightSDK.Core
     // and ModContext.For() reinstalls defensively.
     public static class SdkRuntime
     {
-        public const string Version = "0.3.0";
+        public const string Version = "0.4.0";
 
         private static bool _installed;
         private static bool _shuttingDown;

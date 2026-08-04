@@ -35,6 +35,12 @@ namespace NeonNightSDK.Ui
         // modal (default true) dims the screen, blocks clicks reaching the world, and holds an
         // input restraint so the player can't walk around while it's open. Pass false for a
         // non-blocking panel.
+        //
+        // useGameCancelStack routes Escape through the game's own NNUICancelStack instead of
+        // polling the key, and blocks MenuManager's pause toggle while the window is up. Turn
+        // it on for any window that can be open ON TOP of the game's UI (the pause menu, a
+        // shop) — otherwise one Escape press is seen by both and closes both. It replaces
+        // closeOnEscape rather than adding to it.
         public static UiWindow Window(
             string title,
             float width,
@@ -46,6 +52,7 @@ namespace NeonNightSDK.Ui
             bool closeButton = true,
             bool closeOnEscape = true,
             bool persistAcrossScenes = false,
+            bool useGameCancelStack = false,
             UiTheme theme = null,
             string id = null)
         {
@@ -78,7 +85,8 @@ namespace NeonNightSDK.Ui
                 modal,
                 closeButton,
                 closeOnEscape,
-                persistAcrossScenes);
+                persistAcrossScenes,
+                useGameCancelStack);
 
             OpenWindows.Add(window);
             window.Closed += () => OpenWindows.Remove(window);

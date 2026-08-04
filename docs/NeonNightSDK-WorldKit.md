@@ -130,6 +130,27 @@ WorldKit.SpawnInteractable(
     name: "MyMod_Shopkeeper");
 ```
 
+### Scenery with no interaction
+
+```csharp
+// The machine is decoration; the vendor standing next to it does the talking.
+WorldKit.SpawnProp(
+    sprite: ctx.LoadSprite("Assets/vending-shop.png"),
+    position: new Vector3(19.61f, -44.66f, 0f),
+    name: "MyMod_VendingShop",
+    worldHeight: 2.8f);
+
+WorldKit.SpawnInteractable(
+    sprite: ctx.LoadSprite("Assets/vendor.png"),
+    position: new Vector3(21.61f, -44.66f, 0f),
+    onInteract: () => store.Open(),
+    name: "MyMod_Vendor");
+```
+
+`SpawnProp` builds the same root + `Visual` child + scaling as `SpawnInteractable`, minus the
+collider and the `Interactable` — so the player sees the object but gets no interaction icon on
+it. Same idempotence by `name`.
+
 ### Giving behaviour to an object the game already places
 
 ```csharp
@@ -185,6 +206,30 @@ interactable.OnInteractionFinished.AddListener(ctrl => Debug.Log($"{ctrl.name} f
 `OnInteracted` hands over the `CharController` that interacted. Since most callers do not need
 it, the ergonomic signature takes a plain `Action`; add your own listener to the returned
 `Interactable` when you do need the controller.
+
+### Sorting order is derived from Y, not chosen
+
+`sortingOrder` in this game is **not** a free number — `ANToolkit.Level.SpriteOrderHelper`
+computes it from the object's own position:
+
+```csharp
+renderer.sortingOrder = -(int)(renderer.transform.position.y * 100f - offset);
+```
+
+Lower on screen (more negative Y) means drawn in front. Consequences for modded props:
+
+- **Never copy another prop's `sortingOrder`.** It encodes *that* prop's Y. Pasting a cabinet
+  at `y ≈ 3.15` (order `-315`) onto a machine at `y = -47.89` puts the machine at the wrong
+  depth — in practice, behind the background, which looks exactly like it never spawned.
+  Copying the sorting **layer** and the material from a native prop is fine; the order is not.
+- `WorldKit`'s default order (`100`) is a neutral value for NPCs, not a correct depth for
+  scenery placed among level geometry.
+- To let the game keep the prop sorted, add its own component to the **renderer's** GameObject
+  (the `Visual` child, not the root): `visual.AddComponent<OrderRenderer>()`. It re-runs
+  `SpriteOrderHelper` whenever the Y changes. Setting the order once at spawn as well avoids a
+  one-frame flash before `OrderRenderer`'s first `Update`.
+- `SpriteOrderHelper.DoOrderRenderers()` exists but is only wired to `Entity.OnEntityEnabled`,
+  so it will not fix a modded object that is not an `Entity`.
 
 ## Limitações
 
@@ -243,6 +288,8 @@ it, the ergonomic signature takes a plain `Action`; add your own listener to the
 
 ## Atualizações
 
+- **v0.4.1** — Added `SpawnProp`: sprite-only scenery (no collider, no `Interactable`), for the
+  "machine is decoration, the NPC beside it sells" pattern used by TestMod's street stores.
 - **v0.2.0** — First release of `WorldKit`: `SpawnInteractable`, `AttachToExisting`,
   `AttachInteractable`, `CreateTrigger`. Documented `Interactable`'s 3D collider requirement,
   discovered by decompiling `GetIconDesiredLocation()`.

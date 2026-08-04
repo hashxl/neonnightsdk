@@ -1,6 +1,9 @@
+using System.IO;
 using Asuna.Dialogues;
 using Modding;
 using NeonNightSDK.Core;
+using NeonNightSDK.Loader;
+using NeonNightSDK.Settings;
 
 namespace NeonNightSDK
 {
@@ -17,11 +20,29 @@ namespace NeonNightSDK
         public void OnModLoaded(ModManifest manifest)
         {
             SdkRuntime.Install();
+            // Installed here rather than lazily on the first Register: the pause-menu entry has
+            // to be listening for PauseMenu.OnOpened before the player can pause, and a mod
+            // that only registers its page from a later service would otherwise miss it.
+            SettingsKit.Install();
+
+            // Outfit packages are registered here, before any dependent mod's OnModLoaded runs, so
+            // a shop that lists clothing by item key finds it already present in Item.All instead
+            // of having to wait for the outfit's owner to get around to registering it. This is
+            // also what removes the need for an outfit mod to ship any C# at all — dropping a
+            // package folder under <its mod>/assets/ is the whole install.
+            MeshSkinPackageAdapter.DiagnosticsFolder = Path.Combine(manifest.ModPath, "rig-dumps");
+            var modsRoot = Directory.GetParent(manifest.ModPath)?.FullName;
+            var outfits = MeshSkinPackageAdapter.DiscoverAll(modsRoot);
+            if (outfits > 0) SdkLog.Info($"Discovered {outfits} outfit package(s) under '{modsRoot}'.");
+
             SdkLog.Info($"Loaded (v{SdkRuntime.Version}).");
         }
 
         public void OnModUnLoaded()
         {
+            // Before SdkRuntime.Shutdown: SettingsKit unsubscribes from SdkEvents, which
+            // Shutdown clears wholesale.
+            SettingsKit.Shutdown();
             SdkRuntime.Shutdown();
             SdkLog.Info("Unloaded.");
         }

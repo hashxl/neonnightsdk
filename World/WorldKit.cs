@@ -30,8 +30,10 @@ namespace NeonNightSDK.World
         // as roughly person-sized next to the player.
         public const float DefaultWorldHeight = 2.2f;
 
-        private const string DefaultSortingLayer = "default";
-        private const int DefaultSortingOrder = 100;
+        // Public because callers that copy sorting from a scene prop need a sane value to fall
+        // back to when that prop isn't in the current level — see TestMod's SnackMachineService.
+        public const string DefaultSortingLayer = "default";
+        public const int DefaultSortingOrder = 100;
 
         // Spawns a brand new interactable object from a sprite: visual + collider +
         // Interactable, all wired up.
@@ -59,6 +61,47 @@ namespace NeonNightSDK.World
             Vector2? iconOffset = null,
             string sortingLayer = DefaultSortingLayer,
             int sortingOrder = DefaultSortingOrder)
+        {
+            return SpawnInteractableCore(sprite, position, onInteract, type, name, worldHeight,
+                maxDistance, colliderSize, null, true, iconOffset, sortingLayer, sortingOrder);
+        }
+
+        // Configurable collider overload. colliderCenter and colliderIsTrigger are required so
+        // calls using the original API remain unambiguous and binary-compatible.
+        public static GameObject SpawnInteractable(
+            Sprite sprite,
+            Vector3 position,
+            Action onInteract,
+            Vector3? colliderCenter,
+            bool colliderIsTrigger,
+            InteractionType type = InteractionType.Talk,
+            string name = null,
+            float worldHeight = DefaultWorldHeight,
+            float maxDistance = 5f,
+            Vector3? colliderSize = null,
+            Vector2? iconOffset = null,
+            string sortingLayer = DefaultSortingLayer,
+            int sortingOrder = DefaultSortingOrder)
+        {
+            return SpawnInteractableCore(sprite, position, onInteract, type, name, worldHeight,
+                maxDistance, colliderSize, colliderCenter, colliderIsTrigger, iconOffset,
+                sortingLayer, sortingOrder);
+        }
+
+        private static GameObject SpawnInteractableCore(
+            Sprite sprite,
+            Vector3 position,
+            Action onInteract,
+            InteractionType type,
+            string name,
+            float worldHeight,
+            float maxDistance,
+            Vector3? colliderSize,
+            Vector3? colliderCenter,
+            bool colliderIsTrigger,
+            Vector2? iconOffset,
+            string sortingLayer,
+            int sortingOrder)
         {
             if (sprite == null)
             {
@@ -104,8 +147,8 @@ namespace NeonNightSDK.World
 
             var collider = root.AddComponent<BoxCollider>();
             collider.size = size;
-            collider.center = new Vector3(0f, size.y * 0.5f, 0f);
-            collider.isTrigger = true;
+            collider.center = colliderCenter ?? Vector3.zero;
+            collider.isTrigger = colliderIsTrigger;
 
             var interactable = AttachInteractable(root, onInteract, type, maxDistance,
                 iconOffset ?? new Vector2(0f, size.y + 0.3f));
@@ -117,6 +160,57 @@ namespace NeonNightSDK.World
             }
 
             SdkLog.Info($"WorldKit.SpawnInteractable: '{objectName}' spawned at {position}.");
+            return root;
+        }
+
+        // Pure decoration: a sprite placed in the world with NO collider and NO Interactable.
+        //
+        //   WorldKit.SpawnProp(sprite, pos, name: "MyMod_VendingMachine", worldHeight: 2.6f);
+        //
+        // Use it for the scenery half of a shop — the machine the player looks at while an NPC
+        // beside it does the talking. Same idempotence-by-name and same Visual-child scaling as
+        // SpawnInteractable; the only difference is that nothing is interactive, so the player
+        // gets no interaction icon on the prop itself.
+        public static GameObject SpawnProp(
+            Sprite sprite,
+            Vector3 position,
+            string name = null,
+            float worldHeight = DefaultWorldHeight,
+            string sortingLayer = DefaultSortingLayer,
+            int sortingOrder = DefaultSortingOrder)
+        {
+            if (sprite == null)
+            {
+                SdkLog.Error($"WorldKit.SpawnProp('{name}'): sprite is null — check the path you passed to " +
+                             "ModContext.LoadSprite / ModSpriteResolver.Resolve.");
+                return null;
+            }
+
+            var objectName = string.IsNullOrEmpty(name) ? $"NeonNightSDK_Prop_{sprite.name}" : name;
+
+            var existing = GameObject.Find(objectName);
+            if (existing != null)
+            {
+                SdkLog.Info($"WorldKit.SpawnProp: '{objectName}' already exists in this scene, reusing it.");
+                return existing;
+            }
+
+            var root = new GameObject(objectName);
+            root.transform.position = position;
+
+            var visual = new GameObject("Visual");
+            visual.transform.SetParent(root.transform, false);
+
+            var renderer = visual.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+            renderer.sortingLayerName = sortingLayer;
+            renderer.sortingOrder = sortingOrder;
+
+            var spriteHeight = sprite.bounds.size.y;
+            var scale = spriteHeight > 0f ? worldHeight / spriteHeight : 1f;
+            visual.transform.localScale = new Vector3(scale, scale, 1f);
+
+            SdkLog.Info($"WorldKit.SpawnProp: '{objectName}' spawned at {position}.");
             return root;
         }
 

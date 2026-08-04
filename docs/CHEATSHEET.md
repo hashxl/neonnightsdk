@@ -1,12 +1,12 @@
 # NeonNightSDK — cheat sheet
 
 Everything the SDK can do, on one page. Each section links to the deep-dive doc when there is
-one. Version `v0.3.0`, namespace root `NeonNightSDK`.
+one. Version `v0.4.0`, namespace root `NeonNightSDK`.
 
 Depend on it from your `manifest.json`:
 
 ```json
-"Requires": { "neonnightsdk": "v0.3.0" }
+"Requires": { "neonnightsdk": "v0.4.0" }
 ```
 
 ---
@@ -110,7 +110,13 @@ win.SetBody(b => b
 ### `HudKit.Window(title, width, height, …)`
 
 Optional: `sidebarWidth`, `headerHeight`, `footerHeight` (0 = that region doesn't exist),
-`modal`, `closeButton`, `closeOnEscape`, `theme`, `id`, `persistAcrossScenes`.
+`modal`, `closeButton`, `closeOnEscape`, `useGameCancelStack`, `theme`, `id`,
+`persistAcrossScenes`.
+
+> `useGameCancelStack: true` routes Escape through the game's own `NNUICancelStack` and blocks
+> `MenuManager`'s pause toggle while the window is up. Turn it on for any window that can be
+> open **on top of** the game's UI (the pause menu, a shop) — otherwise one Escape press is seen
+> by both and closes both. It replaces `closeOnEscape` rather than adding to it.
 
 Returns a `UiWindow`: `.SetBody(…)` `.SetSidebar(…)` `.SetHeader(…)` `.SetFooter(…)`
 `.ScrollBodyToTop()` `.Close()` `.IsOpen` `.Closed` event. `SetBody` is the navigation
@@ -139,8 +145,57 @@ A non-blocking corner HUD. `.StatIcon(sprite, () => value01)` adds an icon whose
 | `.Custom(name, rect => …, width, height)` | Escape hatch: a raw `RectTransform` the layout still positions |
 | `.Clear()` | Empty the container |
 
+Form controls — a label on the left, the control on the right, an optional muted line under:
+
+| Widget | |
+|---|---|
+| `.Toggle(label, value, onChanged, description)` | Checkbox |
+| `.Slider(label, min, max, value, onChanged, wholeNumbers, description)` | Slider with a live readout |
+| `.Select(label, choices, index, onChanged, description)` | `<  choice  >` cycler |
+| `.ControlRow(label, description, slot => …)` | The shared skeleton — use it for your own controls |
+
 `UiTheme` is a plain object of colours/sizes — `UiTheme.Default.Clone()`, change fields, pass as
 `theme:`.
+
+---
+
+## Settings — `NeonNightSDK.Settings` → [Mod Settings Menu (wiki)](../../../ThirdCrisisModding.wiki/Mod-Settings-Menu.md)
+
+Adds a **MOD SETTINGS** entry to the game's pause menu (fallback hotkey: **F10**). Your mod
+declares what is configurable; the kit renders it, saves it, and loads it back.
+
+```csharp
+_ctx.Settings("My Mod", page => page
+    .Section("General")
+    .Toggle("enabled", "Enable the feature", () => Cfg.On, v => Cfg.On = v, "What it does.")
+    .Slider("intensity", "Intensity", 0f, 1f, () => Cfg.I, v => Cfg.I = v)
+    .Select("mode", "Mode", new[] { "Off", "Some", "All" }, () => Cfg.Mode, v => Cfg.Mode = v)
+    .Button("Reset progress", "Reset now", () => ResetAll()));
+```
+
+| Builder | Type | Control |
+|---|---|---|
+| `.Toggle(key, label, get, set, description)` | `bool` | Checkbox |
+| `.Slider(key, label, min, max, get, set, wholeNumbers, description)` | `float` | Slider + readout |
+| `.Select(key, label, choices, get, set, description)` | `int` (index) | `<  choice  >` cycler |
+| `.Text(key, label, get, set, placeholder, description)` | `string` | Input field |
+| `.Keybind(key, label, get, set, description)` | `KeyCode` | Click, then press a key |
+| `.Button(label, buttonLabel, action, description)` | — | Runs something now |
+| `.Section(label, description)` | — | Heading |
+| `.Add(ISettingOption)` | — | Your own control type |
+
+- **`key` is the JSON key** — pick it once and never change it; labels are free to change.
+- **`get`/`set` point at your own static field.** Read that field directly in per-frame code:
+  a slider moved in the menu applies on the next frame, with no restart and no apply step.
+- **The default is the field's initialiser**, captured at registration — that's what
+  "Restore defaults" restores. Don't pass it twice.
+- **`ctx.Settings(...)` applies the saved values before it returns**, so construct your services
+  *after* it.
+- `page.Changed += option => …` to react in code. Saved to
+  `Application.persistentDataPath/ModSettings/<modId>.json`, one file per mod.
+
+`SettingsKit.Open()` / `.Close()` / `.Toggle()` open the window yourself;
+`SettingsKit.Register(id, title, build)` is the non-`ModContext` entry point.
 
 ---
 
@@ -149,6 +204,7 @@ A non-blocking corner HUD. `.StatIcon(sprite, () => value01)` adds an icon whose
 | Call | What it does |
 |---|---|
 | `WorldKit.SpawnInteractable(sprite, position, onInteract, …)` | A whole interactable object: sprite + collider + `Interactable`. Idempotent by `name` |
+| `WorldKit.SpawnProp(sprite, position, name, …)` | Scenery only: the same sprite object with no collider and no `Interactable` |
 | `WorldKit.AttachToExisting(nameContains, onInteract, …)` | Makes objects already in the scene interactable, matched by name. Returns how many |
 | `WorldKit.AttachInteractable(gameObject, onInteract, …)` | Same, for a specific object |
 | `WorldKit.CreateTrigger(position, size, onEnter, onlyPlayer: true)` | An invisible trigger volume |
@@ -196,6 +252,28 @@ driven by the game's own `OverworldAnimationTranslator` and is not this kit's jo
 | `AnimationsKit.RegisterBoneRotationAnimationForCharacter(character, name, tracks)` | Same, applied per character |
 
 `new AnimationPipelineStep("actions/interactions/pickup", loop: false, durationOverride: 0.5f)`
+
+### Paired Spine animations — `SexAnimationKit`
+
+Starts one existing Spine clip on each of two nearby live characters. If their closest active
+handlers are farther apart than `MaxDistance`, nothing is changed and the reason is logged.
+
+```csharp
+var session = SexAnimationKit.Play(zoey, partner, new SexAnimationDefinition(
+    "paired/zoey_clip", "paired/partner_clip")
+{
+    MaxDistance = 2.5f,
+    Loop = true,
+    LockMovement = true
+});
+
+// Required for a looping pair when the scene is over:
+session?.Stop();
+```
+
+The two clips must already exist in the respective live skeletons. This coordinates two
+overworld characters; it does not load or replace Neon Nights' self-contained Addressable CG
+prefabs.
 
 ## Clothing / Spine — `NeonNightSDK.Clothing`
 

@@ -150,6 +150,26 @@ task.Resume();
 task.Cancel();
 ```
 
+#### ⚠️ `unscaledTime` and the tab menu: the frozen-HUD trap
+
+`After` / `Every` / `Repeat` all default to `unscaledTime: false`, i.e. scaled game time. That is
+the right default for *gameplay* (a paused game should not keep ticking need decay), but it is the
+wrong default for anything that only **displays** state.
+
+`Asuna.UI.TabMenu` — the inventory/character screen — sets `Time.timeScale = 0f` in its
+constructor and back to `1f` in `OnDestroy`. So while the player has the inventory open,
+`Time.deltaTime` is `0` and **every scaled-time task stops firing entirely**.
+
+This produced a bug that looked nothing like a scheduling problem: eating food restored hunger
+correctly, but the needs HUD kept showing the old value until the player closed the inventory,
+which read as "the food didn't work". The stat had changed the instant the item was used; the
+`UiOverlay` refresh task simply hadn't run, because it was on scaled time. `HudKit.Overlay` now
+polls on `unscaledTime: true` for exactly this reason.
+
+Rule of thumb: **reading and drawing state → `unscaledTime: true`; changing state → leave it
+scaled.** Anything that has to keep working while a menu is open (HUD readouts, animations,
+elapsed-time counters in a window) needs the unscaled clock.
+
 ## Passo a passo
 
 ### 1. Declare the dependency

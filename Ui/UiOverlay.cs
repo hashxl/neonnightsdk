@@ -69,8 +69,14 @@ namespace NeonNightSDK.Ui
 
             Content = new UiBuilder(_panel, Theme);
 
+            // unscaledTime: true is NOT optional here. Asuna.UI.TabMenu (the inventory/tab
+            // screen) sets Time.timeScale = 0f while it is open, so a scaled-time refresh
+            // simply stops ticking: the HUD freezes on whatever value it had when the player
+            // opened the inventory, and only catches up after they close it. That looked
+            // exactly like "eating food doesn't restore hunger" — the stat had already
+            // changed, the readout hadn't. A display poll must always run on wall-clock time.
             _refreshTask = Scheduler
-                .Every(refreshInterval, Refresh)
+                .Every(refreshInterval, Refresh, unscaledTime: true)
                 .Named($"{name}.Refresh");
 
             if (hideInMainMenu)

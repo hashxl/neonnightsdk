@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Asuna.CharManagement;
 using Asuna.Dialogues;
 using Modding;
+using NeonNightSDK.Settings;
 using UnityEngine;
 
 namespace NeonNightSDK.Core
@@ -101,6 +102,29 @@ namespace NeonNightSDK.Core
 
         public string PathTo(string relativePath) =>
             System.IO.Path.Combine(ModPath ?? string.Empty, relativePath);
+
+        // ---- settings ------------------------------------------------------------------
+
+        // Your mod's page in the in-game MOD SETTINGS window (pause menu → MOD SETTINGS).
+        //
+        //   _ctx.Settings("Needs & Sleep")
+        //       .Toggle("hunger", "Enable hunger", () => Cfg.Hunger, v => Cfg.Hunger = v);
+        //
+        // The saved values are applied before this returns, so the line after it already reads
+        // the player's configuration. The page is keyed on the manifest's identifier, which is
+        // also the settings file's name — that's the whole reason to go through the context
+        // rather than SettingsKit.Register directly.
+        public Settings.ModSettingsPage Settings(string title, Action<Settings.ModSettingsPage> build = null,
+            string description = null)
+        {
+            if (_disposed)
+            {
+                Error("Settings: this ModContext was already released (Dispose). Registration ignored.");
+                return null;
+            }
+
+            return SettingsKit.Register(Id, title ?? Id, build, description);
+        }
 
         // ---- scoped events (removed on Dispose) ---------------------------------------
 

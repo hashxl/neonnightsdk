@@ -18,12 +18,12 @@
     <GameDir Condition="'$(GameDir)' == '' And Exists('..\..\Third Crisis Neon Nights_Data')">..\..</GameDir>
     <GameDir Condition="'$(GameDir)' == ''">..\..</GameDir>
     <ManagedDir>$(GameDir)\Third Crisis Neon Nights_Data\Managed</ManagedDir>
-    <BepInExDir>$(GameDir)\BepInEx</BepInExDir>
+    <TCModLoaderDir>$(GameDir)\TCModLoader\Runtime</TCModLoaderDir>
   </PropertyGroup>
 
   <ItemGroup>
     <Reference Include="TCModLoader">
-      <HintPath>$(BepInExDir)\plugins\TCModLoader.dll</HintPath>
+      <HintPath>$(TCModLoaderDir)\TCModLoader.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine">
@@ -80,6 +80,12 @@
       <HintPath>$(ManagedDir)\UnityEngine.TextRenderingModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <!-- Settings persistence. Already loaded in the game process (TCModLoader reads its
+         manifests with it), so referencing it costs nothing at runtime. -->
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(ManagedDir)\Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="spine-csharp">
       <HintPath>$(ManagedDir)\spine-csharp.dll</HintPath>
       <Private>false</Private>
@@ -89,5 +95,16 @@
       <Private>false</Private>
     </Reference>
   </ItemGroup>
+
+  <!-- manifest.json's PathToDLL points at the mod-root copy, not bin/Debug, so without this a
+       rebuild silently changes nothing in-game. Same target every other mod here already has. -->
+  <Target Name="DeployMod" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(MSBuildProjectDirectory)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName).pdb"
+          DestinationFolder="$(MSBuildProjectDirectory)"
+          Condition="Exists('$(TargetDir)$(TargetName).pdb')"
+          SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="NeonNightSDK installed at $(MSBuildProjectDirectory)" />
+  </Target>
 
 </Project>

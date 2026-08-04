@@ -1,4 +1,5 @@
 using System;
+using ANToolkit.UI;
 using NeonNightSDK.Core;
 using UnityEngine;
 using UnityEngine.UI;
@@ -24,6 +25,7 @@ namespace NeonNightSDK.Ui
         private readonly string _restraintId;
         private readonly bool _modal;
         private readonly bool _closeOnEscape;
+        private readonly bool _useGameCancelStack;
 
         private GameObject _canvas;
         private Action _escapeHandler;
@@ -62,13 +64,20 @@ namespace NeonNightSDK.Ui
             bool modal,
             bool closeButton,
             bool closeOnEscape,
-            bool persistAcrossScenes)
+            bool persistAcrossScenes,
+            bool useGameCancelStack)
         {
             Theme = theme ?? UiTheme.Default;
             Name = name;
             _modal = modal;
-            _closeOnEscape = closeOnEscape;
+            _useGameCancelStack = useGameCancelStack;
+            // The two escape paths are mutually exclusive: with both on, one Escape press would
+            // close the window via the raw key poll AND pop the cancel stack, which in a stack
+            // of two windows closes both at once.
+            _closeOnEscape = closeOnEscape && !useGameCancelStack;
             _restraintId = $"NeonNightSDK.Ui.{name}";
+
+            if (useGameCancelStack) BindGameCancel();
 
             _canvas = UiFactory.CreateCanvas(name, sortingOrder, persistAcrossScenes, interactive: true);
 
@@ -150,6 +159,36 @@ namespace NeonNightSDK.Ui
 
             SdkLog.Info($"Ui: window '{name}' opened ({width}x{height}" +
                         (modal ? ", modal" : "") + ").");
+        }
+
+        // Hands Escape over to the game's own conventions instead of polling the key.
+        //
+        // NNUICancelStack is what the base game uses for "some UI is open, Cancel should close
+        // THAT and nothing else": it keeps a stack of open UIs and pops only the top one. Two
+        // windows open, two presses, in the right order — which a raw Input.GetKeyDown poll in
+        // each window cannot do, since all of them see the same keypress.
+        //
+        // MenuManager.CanPause is the second half. ANToolkit.Controllers.PauseInput checks it
+        // before toggling the pause menu, so holding a restraint while the window is up stops
+        // the same press from also closing (or opening) the pause menu underneath.
+        private void BindGameCancel()
+        {
+            SdkLog.SafeInvoke($"Ui: binding '{Name}' to the game's cancel stack", () =>
+            {
+                NNUICancelStack.Add(_restraintId, Close);
+                MenuManager.CanPause.Add(_restraintId);
+            });
+        }
+
+        private void UnbindGameCancel()
+        {
+            SdkLog.SafeInvoke($"Ui: releasing '{Name}' from the game's cancel stack", () =>
+            {
+                // Remove() is a no-op when the entry is already gone, which is exactly the case
+                // when we got here THROUGH the cancel stack popping us.
+                NNUICancelStack.Remove(_restraintId);
+                MenuManager.CanPause.Remove(_restraintId);
+            });
         }
 
         private UiBuilder BuildHeader(RectTransform panel, string title, float headerHeight, bool closeButton)
@@ -241,6 +280,8 @@ namespace NeonNightSDK.Ui
                 SdkEvents.OnSceneLoaded -= _sceneHandler;
                 _sceneHandler = null;
             }
+
+            if (_useGameCancelStack) UnbindGameCancel();
 
             if (_modal) PlayerControl.UnlockPlayer(_restraintId);
 

@@ -1,7 +1,7 @@
 {
   "Name": "NeonNightSDK",
   "Author": "Dev",
-  "Version": "v0.3.0",
+  "Version": "v0.4.0",
   "UniqueIdentifier": "neonnightsdk",
   "PathToDLL": "NeonNightSDK.dll"
 }
