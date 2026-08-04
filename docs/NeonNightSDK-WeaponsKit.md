@@ -1,6 +1,6 @@
 # NeonNightSDK — WeaponsKit (weapon action buttons)
 
-## Resumo
+## Overview
 
 Whenever the player has a weapon drawn, the game shows an action bar: `WeaponUI(Clone)`, a
 panel containing `Contents`, a `HorizontalLayoutGroup` that holds one `ActionUI(Clone)` per
@@ -10,7 +10,7 @@ already builds one button per `Weapon.Action` on its own. `WeaponsKit` exists on
 one case the base game does not handle: a weapon that is **already equipped**, where the button
 bar was already built and needs to be rebuilt on the fly.
 
-## Como funciona
+## How it works
 
 ### Where `ActionUI(Clone)` actually comes from
 
@@ -79,7 +79,7 @@ on demand: call `Weapon.SetAction`/`RemoveAction`, and if the weapon is the one 
 by the player, bind/unbind the hotkey and call `WeaponUI.Create(weapon)` again to rebuild the
 button bar immediately.
 
-## Arquitetura
+## Architecture
 
 | Class | Role |
 |---|---|
@@ -96,7 +96,7 @@ Everything `WeaponsKit` calls into (`Weapon.SetAction`, `WeaponUI.Create`,
 `GameObject`/`Component` of its own — it only drives the game's existing ones correctly for the
 "already equipped" case.
 
-## Passo a passo
+## Getting started
 
 ### 1. Declare the dependency
 
@@ -124,7 +124,7 @@ Action>`. Unity's `Object.Instantiate` (what `Item.Clone()` calls to hand a play
 copy) only carries over **serializable** state; `_actions` is not one, so every clone starts from
 its own field initializer — an *empty* dictionary — regardless of what was added to the template
 beforehand. Calling `AddAction` on the template mutates an object nobody ever equips; the player
-sees nothing. See Limitações below.
+sees nothing. See Limitations below.
 
 - `index` 0/1/2 fall back to the game's own default hotkeys (`"Use"`, `"Cancel"`,
   `"Tool_TertiaryAction"`) if you don't pass `hotkey` — the same rule `Weapon.SetAction` applies
@@ -144,7 +144,7 @@ WeaponsKit.RemoveAction(pistola, 2);
 
 Unbinds the hotkey (if any was bound) and rebuilds the action bar if the weapon is on screen.
 
-## Exemplos
+## Examples
 
 ### A weapon mod that adds an alt-fire button
 
@@ -191,7 +191,7 @@ Because this runs at the moment of equipping, `AddAction`'s "is it on screen" ch
 true — the button appears immediately, and `SetAction` is idempotent per `index`, so re-running
 it on every equip of the same instance is harmless.
 
-## Limitações
+## Limitations
 
 - **Only applies to `Weapon` items.** Plain `Equipment` (not a `Weapon` subclass — e.g. a tool
   like a camera/phone item) never runs `WeaponEquip`/`WeaponUI.Create` at all, no matter what
@@ -206,7 +206,7 @@ it on every equip of the same instance is harmless.
   instance runs its own field initializers instead, i.e. starts with an *empty* `_actions`. An
   action added to the template is invisible to every clone made from it, including the one the
   player equips. Always call `AddAction` on the actual instance in play — see the
-  `Equipment.OnEquipmentUsed` pattern in Exemplos.
+  `Equipment.OnEquipmentUsed` pattern in Examples.
 - **Only weapons the player has equipped get the live rebuild.** `IsOnScreen` requires
   `weapon.IsEquipped && weapon.Owner.IsPlayer`. An NPC's weapon, or a `Weapon` instance sitting
   in inventory, only reflects the change the next time it is equipped by the player — there is
@@ -224,7 +224,7 @@ it on every equip of the same instance is harmless.
 - **Not verified at runtime** — confirmed by decompilation of `Weapon`, `WeaponUI` and
   `WeaponActionUI`, but not yet exercised against a live save with an equipped weapon.
 
-## Boas práticas
+## Best practices
 
 - Prefer adding actions in `WhenPlayerReady`/`OnEquipped`-style hooks rather than at `OnModLoaded`
   time, since the `Weapon` instance itself (an `Item.All` entry) usually only exists once the
@@ -234,7 +234,7 @@ it on every equip of the same instance is harmless.
 - Use `canUse` instead of hiding/disabling the button by hand — `WeaponActionUI.Update()` already
   polls `Weapon.CanUseAction` every frame and fades the button in/out on its own.
 
-## Referências
+## References
 
 - Code: `neonnightsdk/Items/WeaponsKit.cs`
 - Game code (decompiled for this doc via `ilspycmd -t <type> Assembly-CSharp.dll`):
@@ -245,11 +245,11 @@ it on every equip of the same instance is harmless.
   (non-`WeaponUI`) windows and overlays — HudKit does not touch `WeaponUI(Clone)`, it builds
   separate canvases.
 
-## Atualizações
+## Updates
 
 - **v0.3.0** — First release of `WeaponsKit`: `AddAction`/`RemoveAction`, covering the
   already-equipped-weapon case that `Asuna.Items.Weapon`/`WeaponUI` don't handle on their own.
   Corrected after `Brazzer`'s phone integration surfaced two mistakes in this same doc's first
   draft: the examples called `AddAction` on the `Item.All` template (never propagates to the
-  clone the player equips — see Limitações) and assumed `Web_Camera_Phone` was a `Weapon` when
+  clone the player equips — see Limitations) and assumed `Web_Camera_Phone` was a `Weapon` when
   it is plain `Equipment` (not every equippable item goes through `WeaponUI` at all).

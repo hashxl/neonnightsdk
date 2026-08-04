@@ -1,6 +1,6 @@
 # NeonNightSDK — Core (context, events and scheduler)
 
-## Resumo
+## Overview
 
 `ITCMod` offers three entry points: `OnModLoaded`, `OnFrame` and `OnModUnLoaded`. That does not
 cover what a mod actually needs, so every mod re-implemented the same lifecycle by hand:
@@ -11,7 +11,7 @@ periodic.
 Core solves three problems — lifecycle, events and time — and isolates mods from each other:
 **a mod that throws inside a callback no longer takes down other mods' callbacks**.
 
-## Como funciona
+## How it works
 
 ### The right moment in a scene
 
@@ -88,7 +88,7 @@ log names the culprit:
 (the other handlers carried on normally): System.NullReferenceException...
 ```
 
-## Arquitetura
+## Architecture
 
 | Class | Role |
 |---|---|
@@ -170,7 +170,7 @@ Rule of thumb: **reading and drawing state → `unscaledTime: true`; changing st
 scaled.** Anything that has to keep working while a menu is open (HUD readouts, animations,
 elapsed-time counters in a window) needs the unscaled clock.
 
-## Passo a passo
+## Getting started
 
 ### 1. Declare the dependency
 
@@ -214,7 +214,7 @@ individually in `OnModUnLoaded`. A forgotten handler keeps running after the mod
 referencing dead objects. Registering through the context makes `Dispose()` the only cleanup
 line you need.
 
-## Exemplos
+## Examples
 
 ### Scheduling
 
@@ -255,7 +255,7 @@ Restraints are keyed by string and they stack — the game itself uses ids like
 always remove the same id, otherwise you either free the player while another system still
 wants them locked, or leave them frozen forever.
 
-## Limitações
+## Limitations
 
 - **An `Update()` always runs.** Installing the SDK brings up the `FramePump` even if no mod
   uses Core. The per-frame cost is near zero (a `frameCount` check, early returns in
@@ -273,7 +273,7 @@ wants them locked, or leave them frozen forever.
 - **Scope.** Core covers no persistence, no UI and no dialogue construction. See the modding
   wiki's SaveKeys and Create-a-Dialogue pages.
 
-## Boas práticas
+## Best practices
 
 - Register everything through `ModContext` and call `Dispose()` in `OnModUnLoaded`.
 - Use `OnGameplaySceneReady` instead of writing the `MainMenu` guard again.
@@ -284,7 +284,7 @@ wants them locked, or leave them frozen forever.
 - Use `CancelOnSceneChange()` for tasks that only make sense in the current scene.
 - Never resolve the player with `Character.Get(...)`. Use `PlayerRef.Current`.
 
-## Referências
+## References
 
 - Code: `neonnightsdk/Core/`
 - World objects: [NeonNightSDK WorldKit](NeonNightSDK-WorldKit.md)
@@ -297,10 +297,10 @@ wants them locked, or leave them frozen forever.
   (`BepInEx\LogOutput.log` only reflects loading, not runtime events). Confirmation that Core
   came up: `[NeonNightSDK] Core v0.2.0 installed (events + scheduler active).`
 
-## Atualizações
+## Updates
 
 - **v0.3.0** — Added `DebugKit` and its first command, `nnsdk.dump.inventory` — the "Ferramentas
-  de Diagnóstico" item from the SDK roadmap (`nn-sdk.md`).
+  Diagnostics" item from the SDK roadmap (`nn-sdk.md`).
 - **v0.2.0** — First release of Core: `SdkEvents`, `Scheduler`, `ModContext`, `PlayerRef`,
   `PlayerControl`, `SdkRuntime`, `Scenes`, `SdkLog`. Documented the correct `PostTransition`
   timing, the `Character.Get` ambiguity, and the destruction of `DontDestroyOnLoad` objects

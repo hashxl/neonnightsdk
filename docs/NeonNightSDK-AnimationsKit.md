@@ -1,6 +1,6 @@
 # NeonNightSDK — AnimationsKit
 
-## Resumo
+## Overview
 
 Two separate capabilities, both injecting data straight into a live `SkeletonData` at runtime.
 The premise is the same one `ClothingKit` relies on: `Animation` and `Timeline` are **just
@@ -14,7 +14,7 @@ data**, so they can be built in code without the original `.spine` project.
 
 All code lives in [`Animations/AnimationsKit.cs`](../Animations/AnimationsKit.cs).
 
-## Como funciona
+## How it works
 
 ### Bone rotation is stored as a delta, not an absolute angle
 
@@ -82,7 +82,7 @@ If the pipeline ends on a looping animation with no return (for example "she now
 here on"), movement is released at that moment — which is correct, since that new state
 presumably has its own way of responding to input.
 
-## Arquitetura
+## Architecture
 
 | Type | Role |
 |---|---|
@@ -116,7 +116,7 @@ AnimationState.GetCurrent(int track) -> TrackEntry
 | `PlayAnimationPipelineForCharacter(character, track, steps, ..., lockMovement?)` | Same, wrapped over `Handlers`. |
 | `AnimationPipelineStep(name, loop?, durationOverride?)` | One step. `durationOverride` in seconds. |
 
-## Passo a passo
+## Getting started
 
 ### 1. Create an animation
 
@@ -182,7 +182,7 @@ arm (shoulder + elbow + hand) instead of just the wrist.
 
 ### 4. Find existing bone and animation names
 
-Bone names: any name used as `bone=` by the **"Ver peças desta skin"** button in the local
+Bone names: any name used as `bone=` by the **"View parts of this skin"** button in the local
 Spine web calibrator.
 
 Animation names: the calibrator does not list animations by default (only skins and slots), but
@@ -195,7 +195,7 @@ how `actions/faint/faint_fall` (1.33s), `actions/faint/faint_lying` (3s) and
 > not have it. Packaging an in-game dump command (`skins`, `bones`, `animations`) into the SDK
 > is tracked as a future improvement.
 
-## Exemplos
+## Examples
 
 ### Fall down, lie there, get back to idle
 
@@ -238,7 +238,7 @@ AnimationsKit.PlayAnimationPipelineForCharacter(
 Same pattern as the rest of the SDK: walks `character.Handlers` and calls
 `PlayAnimationPipeline` on each `SkeletonAnimation`.
 
-## Limitações
+## Limitations
 
 - **`RotateTimeline` only.** A whole bone rotating about its own pivot. That already covers any
   gesture built from rigid rotation: hand, forearm, head, finger.
@@ -256,7 +256,7 @@ Same pattern as the rest of the SDK: walks `character.Handlers` and calls
 - **Registration is per `SkeletonData`.** Each `SkeletonAnimation` a character owns has its own
   data, which is why the `...ForCharacter` wrappers exist.
 
-## Boas práticas
+## Best practices
 
 - Prefix your animation names (`modded/...`) so they cannot collide with the game's own.
 - Register on every scene load. The methods are idempotent, so this costs nothing and survives
@@ -267,7 +267,7 @@ Same pattern as the rest of the SDK: walks `character.Handlers` and calls
   (falling, being restrained, unconscious), or the player will walk around mid-animation.
 - Verify names against the skeleton before shipping — a typo is silent apart from the log line.
 
-## Referências
+## References
 
 - Code: [`Animations/AnimationsKit.cs`](../Animations/AnimationsKit.cs)
 - Input restraints: [NeonNightSDK Core](NeonNightSDK-Core.md) (`PlayerControl`)
@@ -277,7 +277,7 @@ Same pattern as the rest of the SDK: walks `character.Handlers` and calls
 - Spine types: `Spine.Animation`, `Spine.RotateTimeline`, `Spine.AnimationState`,
   `Spine.TrackEntry` (`spine-csharp.dll`)
 
-## Atualizações
+## Updates
 
 - **v0.2.0** — Movement locking now goes through `Core.PlayerControl` instead of a private
   duplicate of the restraint loop. Document restructured and translated to English.

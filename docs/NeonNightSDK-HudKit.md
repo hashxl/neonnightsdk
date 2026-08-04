@@ -1,6 +1,6 @@
 # NeonNightSDK — HudKit (UI)
 
-## Resumo
+## Overview
 
 Building any UI in this game means assembling uGUI by hand: a `Canvas`, a `CanvasScaler`, a
 `GraphicRaycaster`, then an `Image`/`Text` per element, each with its own
@@ -21,7 +21,7 @@ element means recomputing the offsets of all the others.
 Layout is delegated to uGUI's own layout system, so widgets stack and the container does the
 arithmetic.
 
-## Como funciona
+## How it works
 
 ### Layout instead of coordinates
 
@@ -86,7 +86,7 @@ uGUI buttons and input fields do nothing without an `EventSystem` in the scene. 
 one during normal play, but relying on that produces UI that works everywhere except the one
 scene that does not. `UiFactory.EnsureEventSystem()` creates one if it is missing.
 
-## Arquitetura
+## Architecture
 
 | Class | Role |
 |---|---|
@@ -122,7 +122,7 @@ Every method returns the builder, so calls chain. When you need the underlying U
 header.Input("search...", Search, configure: f => _searchField = f);
 ```
 
-## Passo a passo
+## Getting started
 
 ### 1. Declare the dependency
 
@@ -153,7 +153,7 @@ Regions are opt-in. `sidebarWidth: 0` (the default) means the window has no side
 var win = HudKit.Window("NeonNet", 1280, 800, sidebarWidth: 220, footerHeight: 30f);
 ```
 
-## Exemplos
+## Examples
 
 ### An in-game browser
 
@@ -177,7 +177,7 @@ public sealed class Browser
 
         _win.SetHeader(h => h
             .Button("<", Back, width: 44f)
-            .Input("digite um endereço...", Navigate, configure: f => _addressBar = f)
+            .Input("enter an address...", Navigate, configure: f => _addressBar = f)
             .Button("Ir", () => Navigate(_addressBar.text), width: 60f)
             .Flexible()
             .Button("X", _win.Close, width: 44f));
@@ -204,14 +204,14 @@ public sealed class Browser
             .Title(url)
             .Muted("carregado agora")
             .Separator()
-            .Text("Conteúdo da página. Quebra linha sozinho e o container cresce junto.")
+            .Text("Page content wraps automatically and the container grows with it.")
             .Spacer(12f)
             .Row(r => r
                 .Button("Comprar", Comprar)
                 .Button("Voltar", Back)
                 .Flexible())
             .Separator()
-            .Link("ir para darkmarket.nn", () => Navigate("darkmarket.nn")));
+            .Link("go to darkmarket.nn", () => Navigate("darkmarket.nn")));
     }
 
     private void Back()
@@ -233,7 +233,7 @@ public void Register(string url, Action<UiBuilder> page) => _sites[url] = page;
 private void Navigate(string url)
 {
     if (_sites.TryGetValue(url, out var page)) _win.SetBody(page);
-    else _win.SetBody(b => b.Title("404").Muted($"'{url}' não encontrado."));
+    else _win.SetBody(b => b.Title("404").Muted($"'{url}' was not found."));
 }
 ```
 
@@ -272,7 +272,7 @@ theme.WindowBackground = new Color(0.10f, 0.02f, 0.08f, 0.97f);
 HudKit.Window("Loja", 800, 500, theme: theme);
 ```
 
-## Limitações
+## Limitations
 
 - **Legacy `UnityEngine.UI.Text`, not TextMeshPro.** TMP ships with the game
   (`Unity.TextMeshPro.dll`) but is not referenced by the SDK. Legacy `Text` is what the
@@ -298,7 +298,7 @@ HudKit.Window("Loja", 800, 500, theme: theme);
 - **Not verified at runtime.** The kit compiles and the layout logic follows uGUI's documented
   behaviour, but it has not yet been exercised in a running game.
 
-## Boas práticas
+## Best practices
 
 - Prefer `SetBody`/`SetSidebar` over `Body.Clear()` plus manual rebuilding — `SetBody` also
   resets the scroll position, which is almost always what you want after navigating.
@@ -313,7 +313,7 @@ HudKit.Window("Loja", 800, 500, theme: theme);
 - Do not put a `GraphicRaycaster` on a HUD overlay. `HudKit.Overlay` creates its canvas
   non-interactive precisely so it cannot swallow clicks meant for the game.
 
-## Referências
+## References
 
 - Code: `neonnightsdk/Ui/` (`HudKit`, `UiWindow`, `UiBuilder`, `UiOverlay`, `UiTheme`,
   `UiFactory`)
@@ -324,7 +324,7 @@ HudKit.Window("Loja", 800, 500, theme: theme);
 - Unity types: `UnityEngine.UI.VerticalLayoutGroup`, `LayoutElement`, `ContentSizeFitter`,
   `ScrollRect`, `RectMask2D`, `InputField` (all in `UnityEngine.UI.dll`)
 
-## Atualizações
+## Updates
 
 - **v0.2.0** — First release of `HudKit`: `Window` with header/sidebar/body/footer regions,
   `Overlay` with value binding, `UiBuilder` fluent widgets, `UiTheme`. Added the

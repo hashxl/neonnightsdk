@@ -1,6 +1,6 @@
 # NeonNightSDK — WorldKit
 
-## Resumo
+## Overview
 
 Creating an interactable object in the world (a shop NPC, a vending machine, an examinable
 prop) means assembling a stack of components by hand: a root `GameObject`, a child for the
@@ -10,12 +10,12 @@ lines per object, and it was copy-pasted into three separate TestMod services.
 
 `WorldKit` reduces it to one call and — more importantly — guarantees the collider rule
 `Interactable` requires, which is easy to violate without noticing (see
-[Limitações](#limitações)).
+[Limitations](#limitations)).
 
 Related: the modding wiki's Interactables, Triggers and NPCs pages document the raw game API.
 This page documents the SDK layer on top of them.
 
-## Como funciona
+## How it works
 
 ### The 3D collider rule
 
@@ -70,7 +70,7 @@ that already carry an `Interactable`.
 This removes the `private bool _spawned;` flag every service carried to avoid duplicating
 objects when the spawn was called more than once per scene.
 
-## Arquitetura
+## Architecture
 
 | Component | Role |
 |---|---|
@@ -84,7 +84,7 @@ Objects created by `WorldKit` are ordinary scene objects: Unity destroys them on
 **There is nothing to clean up in `OnModUnLoaded`** — just call the spawn again on the next
 scene.
 
-## Passo a passo
+## Getting started
 
 ### 1. Declare the dependency
 
@@ -118,7 +118,7 @@ public void OnModLoaded(ModManifest manifest)
 Use `OnGameplaySceneReady` (not `OnSceneLoaded`) whenever the interaction may open a dialogue
 or play an animation — see [NeonNightSDK Core](NeonNightSDK-Core.md) for why.
 
-## Exemplos
+## Examples
 
 ### Shop NPC
 
@@ -231,7 +231,7 @@ Lower on screen (more negative Y) means drawn in front. Consequences for modded 
 - `SpriteOrderHelper.DoOrderRenderers()` exists but is only wired to `Entity.OnEntityEnabled`,
   so it will not fix a modded object that is not an `Entity`.
 
-## Limitações
+## Limitations
 
 - **A 3D collider is mandatory.** `WorldKit` guarantees it, but if you assemble an
   `Interactable` by hand, remember: `Collider2D` does not work, and the failure appears as a
@@ -257,7 +257,7 @@ Lower on screen (more negative Y) means drawn in front. Consequences for modded 
 - **Not verified at runtime.** `Trigger` in particular has no proven precedent in this
   codebase; its behaviour here was derived from decompiled code, not from observation.
 
-## Boas práticas
+## Best practices
 
 - Call the spawn from `SdkEvents.OnGameplaySceneReady`, not `OnSceneLoaded`, when the
   interaction opens a dialogue or plays an animation.
@@ -274,7 +274,7 @@ Lower on screen (more negative Y) means drawn in front. Consequences for modded 
 - Check `AttachToExisting`'s return value. If you expect 1 and get 0, the name changed or the
   scene is wrong — that is the fastest diagnosis.
 
-## Referências
+## References
 
 - Code: `neonnightsdk/World/WorldKit.cs`
 - Lifecycle and scheduling: [NeonNightSDK Core](NeonNightSDK-Core.md)
@@ -286,7 +286,7 @@ Lower on screen (more negative Y) means drawn in front. Consequences for modded 
   `testmod-master/Info/InfoNpcService.cs`,
   `testmod-master/VendingMachine/VendingMachineService.cs`
 
-## Atualizações
+## Updates
 
 - **v0.4.1** — Added `SpawnProp`: sprite-only scenery (no collider, no `Interactable`), for the
   "machine is decoration, the NPC beside it sells" pattern used by TestMod's street stores.
