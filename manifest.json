@@ -1,6 +1,6 @@
 {
   "Name": "NeonNightSDK",
-  "Author": "Dev",
+  "Author": "hashXL",
   "Version": "v0.4.0",
   "UniqueIdentifier": "neonnightsdk",
   "PathToDLL": "NeonNightSDK.dll"
